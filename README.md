@@ -81,6 +81,8 @@ Required environment variables:
 | GET    | `/api/healthz`   | Health check                         |
 | POST   | `/api/users`     | Create a user                        |
 | POST   | `/api/login`     | Log in with an email and password    |
+| POST   | `/api/refresh`   | Exchange a refresh token for a JWT   |
+| POST   | `/api/revoke`    | Revoke a refresh token               |
 | POST   | `/api/chirps`    | Create a chirp                       |
 | GET    | `/admin/metrics` | View request count                   |
 | POST   | `/admin/reset`   | Reset metrics and delete users (dev) |

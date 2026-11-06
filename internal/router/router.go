@@ -23,6 +23,8 @@ func New(h *handlers.Handler, metrics *middleware.Metrics) http.Handler {
 	// Users
 	mux.HandleFunc("POST /api/users", h.CreateUser)
 	mux.HandleFunc("POST /api/login", h.Login)
+	mux.HandleFunc("POST /api/refresh", h.Refresh)
+	mux.HandleFunc("POST /api/revoke", h.Revoke)
 
 	// Chirps
 	mux.HandleFunc("GET /api/chirps", h.GetChirps)
