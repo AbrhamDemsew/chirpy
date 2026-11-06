@@ -101,6 +101,50 @@ func (h *Handler) GetChirp(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, http.StatusOK, chirp)
 }
 
+// DeleteChirp deletes a chirp owned by the authenticated user.
+func (h *Handler) DeleteChirp(w http.ResponseWriter, r *http.Request) {
+	tokenString, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respond.Error(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	userID, err := auth.ValidateJWT(tokenString, h.jwtSecret)
+	if err != nil {
+		respond.Error(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	id, err := uuid.Parse(r.PathValue("chirpID"))
+	if err != nil {
+		respond.Error(w, http.StatusNotFound, "Chirp not found")
+		return
+	}
+
+	chirp, err := h.db.GetChirp(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			respond.Error(w, http.StatusNotFound, "Chirp not found")
+			return
+		}
+
+		respond.Error(w, http.StatusInternalServerError, "Couldn't get chirp")
+		return
+	}
+
+	if chirp.UserID != userID {
+		respond.Error(w, http.StatusForbidden, "You can only delete your own chirps")
+		return
+	}
+
+	if err := h.db.DeleteChirp(r.Context(), id); err != nil {
+		respond.Error(w, http.StatusInternalServerError, "Couldn't delete chirp")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // cleanChirpBody replaces profane words with asterisks.
 func cleanChirpBody(body string) string {
 	words := strings.Split(body, " ")

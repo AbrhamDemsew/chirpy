@@ -22,6 +22,11 @@ type loginRequest struct {
 	Password string `json:"password"`
 }
 
+type updateUserRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
 const (
 	accessTokenExpiration  = time.Hour
 	refreshTokenExpiration = 60 * 24 * time.Hour
@@ -108,6 +113,55 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respond.JSON(w, http.StatusCreated, response)
+}
+
+// UpdateUser updates the email and password of the authenticated user.
+func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
+	tokenString, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respond.Error(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	userID, err := auth.ValidateJWT(tokenString, h.jwtSecret)
+	if err != nil {
+		respond.Error(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	params := updateUserRequest{}
+	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
+		respond.Error(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if params.Email == "" {
+		respond.Error(w, http.StatusBadRequest, "Email is required")
+		return
+	}
+
+	if params.Password == "" {
+		respond.Error(w, http.StatusBadRequest, "Password is required")
+		return
+	}
+
+	hashedPassword, err := auth.HashPassword(params.Password)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "Couldn't hash password")
+		return
+	}
+
+	user, err := h.db.UpdateUser(r.Context(), database.UpdateUserParams{
+		ID:             userID,
+		HashedPassword: hashedPassword,
+		Email:          params.Email,
+	})
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "Couldn't update user")
+		return
+	}
+
+	respond.JSON(w, http.StatusOK, newUserResponse(user))
 }
 
 // Login validates a user's email and password.
