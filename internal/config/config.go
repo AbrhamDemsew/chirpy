@@ -12,6 +12,7 @@ type Config struct {
 	DatabaseURL string
 	Platform    string
 	Address     string
+	JWTSecret   string
 }
 
 // Load reads configuration from the environment, loading a local .env file
@@ -23,10 +24,15 @@ func Load() (Config, error) {
 		DatabaseURL: os.Getenv("DB_URL"),
 		Platform:    os.Getenv("PLATFORM"),
 		Address:     envOrDefault("ADDRESS", ":8080"),
+		JWTSecret:   os.Getenv("JWT_SECRET"),
 	}
 
 	if cfg.DatabaseURL == "" {
 		return Config{}, errors.New("DB_URL must be set")
+	}
+
+	if cfg.JWTSecret == "" {
+		return Config{}, errors.New("JWT_SECRET must be set")
 	}
 
 	return cfg, nil

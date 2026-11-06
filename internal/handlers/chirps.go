@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"MODULE_PATH/internal/auth"
 	"MODULE_PATH/internal/database"
 	"MODULE_PATH/internal/respond"
 )
@@ -22,12 +23,23 @@ var profaneWords = map[string]struct{}{
 }
 
 type createChirpRequest struct {
-	Body   string    `json:"body"`
-	UserID uuid.UUID `json:"user_id"`
+	Body string `json:"body"`
 }
 
-// CreateChirp creates a new chirp from a JSON request body.
+// CreateChirp creates a new chirp for the user identified by the request's JWT.
 func (h *Handler) CreateChirp(w http.ResponseWriter, r *http.Request) {
+	tokenString, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respond.Error(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	userID, err := auth.ValidateJWT(tokenString, h.jwtSecret)
+	if err != nil {
+		respond.Error(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
 	params := createChirpRequest{}
 	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
 		respond.Error(w, http.StatusBadRequest, "Invalid request body")
@@ -41,7 +53,7 @@ func (h *Handler) CreateChirp(w http.ResponseWriter, r *http.Request) {
 
 	chirp, err := h.db.CreateChirp(r.Context(), database.CreateChirpParams{
 		Body:   cleanChirpBody(params.Body),
-		UserID: params.UserID,
+		UserID: userID,
 	})
 	if err != nil {
 		respond.Error(w, http.StatusInternalServerError, "Couldn't create chirp")

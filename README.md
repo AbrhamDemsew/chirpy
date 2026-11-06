@@ -1,7 +1,6 @@
 # Chirpy
 
-A small Go web server for the Chirpy project, organized in layers similar to an
-Express application.
+A small Go web server for the Chirpy project, organized in layers similar to an Express application.
 
 ## Project structure
 

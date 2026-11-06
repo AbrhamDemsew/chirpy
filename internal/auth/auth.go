@@ -3,6 +3,8 @@ package auth
 import (
 	"errors"
 	"fmt"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/alexedwards/argon2id"
@@ -11,6 +13,22 @@ import (
 )
 
 const jwtIssuer = "chirpy-access"
+
+// GetBearerToken extracts the token from an Authorization header that uses
+// the Bearer scheme.
+func GetBearerToken(headers http.Header) (string, error) {
+	authHeader := headers.Get("Authorization")
+	if authHeader == "" {
+		return "", errors.New("authorization header is missing")
+	}
+
+	parts := strings.Fields(authHeader)
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+		return "", errors.New("authorization header must use the Bearer scheme")
+	}
+
+	return parts[1], nil
+}
 
 // HashPassword hashes a plain-text password using Argon2id.
 func HashPassword(password string) (string, error) {

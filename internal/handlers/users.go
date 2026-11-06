@@ -18,9 +18,12 @@ type createUserRequest struct {
 }
 
 type loginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email            string `json:"email"`
+	Password         string `json:"password"`
+	ExpiresInSeconds *int   `json:"expires_in_seconds"`
 }
+
+const maxTokenExpirationSeconds = 3600
 
 // userResponse is the public representation of a user. It deliberately omits
 // the password hash so that credentials are never sent to clients.
@@ -38,6 +41,23 @@ func newUserResponse(user database.User) userResponse {
 		UpdatedAt: user.UpdatedAt,
 		Email:     user.Email,
 	}
+}
+
+type userWithTokenResponse struct {
+	userResponse
+	Token string `json:"token"`
+}
+
+func (h *Handler) newUserWithTokenResponse(user database.User, expiresIn time.Duration) (userWithTokenResponse, error) {
+	token, err := auth.MakeJWT(user.ID, h.jwtSecret, expiresIn)
+	if err != nil {
+		return userWithTokenResponse{}, err
+	}
+
+	return userWithTokenResponse{
+		userResponse: newUserResponse(user),
+		Token:        token,
+	}, nil
 }
 
 // CreateUser creates a new user from a JSON request body.
@@ -73,7 +93,13 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respond.JSON(w, http.StatusCreated, newUserResponse(user))
+	response, err := h.newUserWithTokenResponse(user, time.Hour)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "Couldn't create token")
+		return
+	}
+
+	respond.JSON(w, http.StatusCreated, response)
 }
 
 // Login validates a user's email and password.
@@ -96,5 +122,23 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respond.JSON(w, http.StatusOK, newUserResponse(user))
+	expiresIn := time.Hour
+	if params.ExpiresInSeconds != nil {
+		seconds := *params.ExpiresInSeconds
+		if seconds > maxTokenExpirationSeconds {
+			seconds = maxTokenExpirationSeconds
+		}
+		if seconds < 0 {
+			seconds = 0
+		}
+		expiresIn = time.Duration(seconds) * time.Second
+	}
+
+	response, err := h.newUserWithTokenResponse(user, expiresIn)
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "Couldn't create token")
+		return
+	}
+
+	respond.JSON(w, http.StatusOK, response)
 }
