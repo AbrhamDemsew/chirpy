@@ -32,6 +32,22 @@ func GetBearerToken(headers http.Header) (string, error) {
 	return parts[1], nil
 }
 
+// GetAPIKey extracts the key from an Authorization header that uses the
+// ApiKey scheme.
+func GetAPIKey(headers http.Header) (string, error) {
+	authHeader := headers.Get("Authorization")
+	if authHeader == "" {
+		return "", errors.New("authorization header is missing")
+	}
+
+	parts := strings.Fields(authHeader)
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "ApiKey") {
+		return "", errors.New("authorization header must use the ApiKey scheme")
+	}
+
+	return parts[1], nil
+}
+
 // HashPassword hashes a plain-text password using Argon2id.
 func HashPassword(password string) (string, error) {
 	return argon2id.CreateHash(password, argon2id.DefaultParams)

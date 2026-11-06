@@ -13,6 +13,7 @@ type Config struct {
 	Platform    string
 	Address     string
 	JWTSecret   string
+	PolkaKey    string
 }
 
 // Load reads configuration from the environment, loading a local .env file
@@ -25,6 +26,7 @@ func Load() (Config, error) {
 		Platform:    os.Getenv("PLATFORM"),
 		Address:     envOrDefault("ADDRESS", ":8080"),
 		JWTSecret:   os.Getenv("JWT_SECRET"),
+		PolkaKey:    os.Getenv("POLKA_KEY"),
 	}
 
 	if cfg.DatabaseURL == "" {
@@ -33,6 +35,10 @@ func Load() (Config, error) {
 
 	if cfg.JWTSecret == "" {
 		return Config{}, errors.New("JWT_SECRET must be set")
+	}
+
+	if cfg.PolkaKey == "" {
+		return Config{}, errors.New("POLKA_KEY must be set")
 	}
 
 	return cfg, nil

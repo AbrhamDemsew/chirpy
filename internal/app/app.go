@@ -16,7 +16,7 @@ import (
 func New(cfg config.Config, db *sql.DB) http.Handler {
 	queries := database.New(db)
 	metrics := middleware.NewMetrics()
-	handler := handlers.New(queries, cfg.Platform, cfg.JWTSecret, metrics)
+	handler := handlers.New(queries, cfg.Platform, cfg.JWTSecret, cfg.PolkaKey, metrics)
 
 	return router.New(handler, metrics)
 }

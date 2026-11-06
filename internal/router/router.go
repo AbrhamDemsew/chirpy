@@ -27,6 +27,9 @@ func New(h *handlers.Handler, metrics *middleware.Metrics) http.Handler {
 	mux.HandleFunc("POST /api/refresh", h.Refresh)
 	mux.HandleFunc("POST /api/revoke", h.Revoke)
 
+	// Webhooks
+	mux.HandleFunc("POST /api/polka/webhooks", h.PolkaWebhook)
+
 	// Chirps
 	mux.HandleFunc("GET /api/chirps", h.GetChirps)
 	mux.HandleFunc("GET /api/chirps/{chirpID}", h.GetChirp)

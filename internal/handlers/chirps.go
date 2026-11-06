@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"sort"
 	"strings"
 
 	"github.com/google/uuid"
@@ -63,9 +64,28 @@ func (h *Handler) CreateChirp(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, http.StatusCreated, chirp)
 }
 
-// GetChirps returns every chirp, ordered by creation time.
+// GetChirps returns chirps ordered by creation time. When the author_id query
+// parameter is provided, only chirps from that author are returned. The sort
+// query parameter controls the order: "asc" (default) or "desc".
 func (h *Handler) GetChirps(w http.ResponseWriter, r *http.Request) {
-	chirps, err := h.db.GetChirps(r.Context())
+	var (
+		chirps []database.Chirp
+		err    error
+	)
+
+	authorID := r.URL.Query().Get("author_id")
+	if authorID == "" {
+		chirps, err = h.db.GetChirps(r.Context())
+	} else {
+		userID, parseErr := uuid.Parse(authorID)
+		if parseErr != nil {
+			respond.Error(w, http.StatusBadRequest, "Invalid author ID")
+			return
+		}
+
+		chirps, err = h.db.GetChirpsByAuthor(r.Context(), userID)
+	}
+
 	if err != nil {
 		respond.Error(w, http.StatusInternalServerError, "Couldn't get chirps")
 		return
@@ -75,6 +95,14 @@ func (h *Handler) GetChirps(w http.ResponseWriter, r *http.Request) {
 	if chirps == nil {
 		chirps = []database.Chirp{}
 	}
+
+	descending := r.URL.Query().Get("sort") == "desc"
+	sort.Slice(chirps, func(i, j int) bool {
+		if descending {
+			return chirps[i].CreatedAt.After(chirps[j].CreatedAt)
+		}
+		return chirps[i].CreatedAt.Before(chirps[j].CreatedAt)
+	})
 
 	respond.JSON(w, http.StatusOK, chirps)
 }

@@ -68,6 +68,65 @@ func TestGetBearerToken(t *testing.T) {
 	}
 }
 
+func TestGetAPIKey(t *testing.T) {
+	tests := []struct {
+		name    string
+		header  string
+		wantKey string
+		wantErr bool
+	}{
+		{
+			name:    "valid api key",
+			header:  "ApiKey key-string",
+			wantKey: "key-string",
+		},
+		{
+			name:    "extra whitespace",
+			header:  "  ApiKey    key-string  ",
+			wantKey: "key-string",
+		},
+		{
+			name:    "missing header",
+			wantErr: true,
+		},
+		{
+			name:    "wrong scheme",
+			header:  "Bearer key-string",
+			wantErr: true,
+		},
+		{
+			name:    "missing key",
+			header:  "ApiKey",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			headers := http.Header{}
+			if tt.header != "" {
+				headers.Set("Authorization", tt.header)
+			}
+
+			key, err := GetAPIKey(headers)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("GetAPIKey returned no error")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("GetAPIKey returned an error: %v", err)
+			}
+
+			if key != tt.wantKey {
+				t.Errorf("got key %q, want %q", key, tt.wantKey)
+			}
+		})
+	}
+}
+
 func TestMakeRefreshToken(t *testing.T) {
 	token := MakeRefreshToken()
 	if len(token) != 64 {

@@ -19,6 +19,7 @@ A small Go web server for the Chirpy project, organized in layers similar to an 
 │   │   ├── health.go
 │   │   ├── users.go
 │   │   ├── chirps.go
+│   │   ├── polka.go
 │   │   └── admin.go
 │   ├── auth/
 │   │   └── auth.go              # Password hashing and verification
@@ -73,6 +74,7 @@ Required environment variables:
 
 - `DB_URL` - PostgreSQL connection string
 - `PLATFORM` - set to `dev` to enable `POST /admin/reset`
+- `POLKA_KEY` - API key required by the Polka webhook endpoint
 
 ## Endpoints
 
@@ -84,6 +86,7 @@ Required environment variables:
 | POST   | `/api/login`     | Log in with an email and password    |
 | POST   | `/api/refresh`   | Exchange a refresh token for a JWT   |
 | POST   | `/api/revoke`    | Revoke a refresh token               |
+| POST   | `/api/polka/webhooks` | Handle Polka subscription events |
 | POST   | `/api/chirps`    | Create a chirp                       |
 | DELETE | `/api/chirps/{chirpID}` | Delete your own chirp        |
 | GET    | `/admin/metrics` | View request count                   |

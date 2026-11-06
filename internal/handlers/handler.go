@@ -10,15 +10,17 @@ type Handler struct {
 	db        *database.Queries
 	platform  string
 	jwtSecret string
+	polkaKey  string
 	metrics   *middleware.Metrics
 }
 
 // New creates a Handler with the dependencies it needs.
-func New(db *database.Queries, platform, jwtSecret string, metrics *middleware.Metrics) *Handler {
+func New(db *database.Queries, platform, jwtSecret, polkaKey string, metrics *middleware.Metrics) *Handler {
 	return &Handler{
 		db:        db,
 		platform:  platform,
 		jwtSecret: jwtSecret,
+		polkaKey:  polkaKey,
 		metrics:   metrics,
 	}
 }
