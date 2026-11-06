@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/http"
@@ -38,6 +40,17 @@ func HashPassword(password string) (string, error) {
 // CheckPasswordHash reports whether password matches the stored Argon2id hash.
 func CheckPasswordHash(password, hash string) (bool, error) {
 	return argon2id.ComparePasswordAndHash(password, hash)
+}
+
+// MakeRefreshToken generates a random 256-bit refresh token and returns it as
+// a hex-encoded string.
+func MakeRefreshToken() string {
+	tokenBytes := make([]byte, 32)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		panic(fmt.Sprintf("failed to generate refresh token: %v", err))
+	}
+
+	return hex.EncodeToString(tokenBytes)
 }
 
 // MakeJWT creates a signed JWT for the given user that expires after

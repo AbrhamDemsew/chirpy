@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"encoding/hex"
 	"net/http"
 	"testing"
 	"time"
@@ -64,6 +65,21 @@ func TestGetBearerToken(t *testing.T) {
 				t.Errorf("got token %q, want %q", token, tt.wantToken)
 			}
 		})
+	}
+}
+
+func TestMakeRefreshToken(t *testing.T) {
+	token := MakeRefreshToken()
+	if len(token) != 64 {
+		t.Fatalf("got token length %d, want 64", len(token))
+	}
+
+	if _, err := hex.DecodeString(token); err != nil {
+		t.Fatalf("token is not valid hex: %v", err)
+	}
+
+	if other := MakeRefreshToken(); token == other {
+		t.Error("MakeRefreshToken returned the same token twice")
 	}
 }
 

@@ -18,12 +18,14 @@ type createUserRequest struct {
 }
 
 type loginRequest struct {
-	Email            string `json:"email"`
-	Password         string `json:"password"`
-	ExpiresInSeconds *int   `json:"expires_in_seconds"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
-const maxTokenExpirationSeconds = 3600
+const (
+	accessTokenExpiration  = time.Hour
+	refreshTokenExpiration = 60 * 24 * time.Hour
+)
 
 // userResponse is the public representation of a user. It deliberately omits
 // the password hash so that credentials are never sent to clients.
@@ -46,6 +48,12 @@ func newUserResponse(user database.User) userResponse {
 type userWithTokenResponse struct {
 	userResponse
 	Token string `json:"token"`
+}
+
+type loginResponse struct {
+	userResponse
+	Token        string `json:"token"`
+	RefreshToken string `json:"refresh_token"`
 }
 
 func (h *Handler) newUserWithTokenResponse(user database.User, expiresIn time.Duration) (userWithTokenResponse, error) {
@@ -93,7 +101,7 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := h.newUserWithTokenResponse(user, time.Hour)
+	response, err := h.newUserWithTokenResponse(user, accessTokenExpiration)
 	if err != nil {
 		respond.Error(w, http.StatusInternalServerError, "Couldn't create token")
 		return
@@ -122,23 +130,26 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	expiresIn := time.Hour
-	if params.ExpiresInSeconds != nil {
-		seconds := *params.ExpiresInSeconds
-		if seconds > maxTokenExpirationSeconds {
-			seconds = maxTokenExpirationSeconds
-		}
-		if seconds < 0 {
-			seconds = 0
-		}
-		expiresIn = time.Duration(seconds) * time.Second
-	}
-
-	response, err := h.newUserWithTokenResponse(user, expiresIn)
+	accessToken, err := auth.MakeJWT(user.ID, h.jwtSecret, accessTokenExpiration)
 	if err != nil {
 		respond.Error(w, http.StatusInternalServerError, "Couldn't create token")
 		return
 	}
 
-	respond.JSON(w, http.StatusOK, response)
+	refreshToken := auth.MakeRefreshToken()
+	_, err = h.db.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
+		Token:     refreshToken,
+		UserID:    user.ID,
+		ExpiresAt: time.Now().UTC().Add(refreshTokenExpiration),
+	})
+	if err != nil {
+		respond.Error(w, http.StatusInternalServerError, "Couldn't create refresh token")
+		return
+	}
+
+	respond.JSON(w, http.StatusOK, loginResponse{
+		userResponse: newUserResponse(user),
+		Token:        accessToken,
+		RefreshToken: refreshToken,
+	})
 }
